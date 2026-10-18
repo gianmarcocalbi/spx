@@ -27,9 +27,9 @@ months:
    the PO challenge it, and the dev revises it again.
 4. The dev opens a GitHub PR containing the spec, and code owners review
    their parts. The spec is now **assessed**. The PR stays open.
-5. The dev writes the plan with superpowers' `writing-plans`. The plan and a
-   short overview of it go into the same PR. People review the overview, not
-   the plan.
+5. The dev writes the plan with superpowers' `writing-plans`. The plan goes
+   into the same PR. If the dev wants one, a short overview of the plan goes
+   in too, and people review the overview instead of the plan.
 6. The code lands in the same PR. When the PR merges, the spec is **done**.
 
 Usually one consolidated spec has one plan. Sometimes a draft spec (a
@@ -39,14 +39,15 @@ the PI, and each of those has its own plan.
 spx adds what superpowers is missing for this:
 
 - a status for every spec
-- links between related specs
+- links between related specs, and to the JIRA tickets (or other items) a
+  spec materializes
 - spec sections organized by code owner
 - a list of the decisions made while writing and revising the spec
-- a short overview of each plan that people can review
+- on request, a short overview of a plan that people can review
 - a checker that reports when any of this drifts
 
-The team's process is enforced outside spx: JIRA, the review meeting, and
-GitHub branch protection. spx keeps the documents in step with that process
+The team's process is enforced outside spx, through JIRA, the review meeting
+and the team's own rules. spx keeps the documents in step with that process
 and stays out of its way.
 
 ## 2. Goals
@@ -61,10 +62,12 @@ and stays out of its way.
     area
 - **Related specs:** specs can declare the specs they relate to. spx keeps
   those links valid.
+- **Origins:** specs can list the JIRA tickets, or anything else, that they
+  are a materialization of.
 - **Spec PRs:** they request reviews from the GitHub accounts that own the
   affected areas.
-- **Plans:** every plan gets an overview sidecar with diagrams, which people
-  review in the feature PR in place of the plan.
+- **Plans:** when the dev says yes, a plan gets an overview sidecar with
+  diagrams, which people review in the feature PR in place of the plan.
 - **Checker:** a dependency-free checker reports drift in the specs, plans
   and sidecars. The skills run it at fixed points, and it can also run in CI.
 - **Setup:** a setup skill prepares a repo for spx, and later reviews or
@@ -99,6 +102,8 @@ spx has failed if any of these happen, even when everything else works:
 - **spx blocks or gates a step.** When the dev says "go on with the plan" or
   "start implementing", superpowers proceeds. spx may warn, and its checker
   may report, but it never refuses and never waits.
+- **spx produces an optional extra nobody asked for.** Extras such as the
+  plan overview are offered, and made only when the dev says yes.
 - **spx forks superpowers, edits its files, or restructures superpowers'
   spec content.** spx only adds to what superpowers writes.
 - **spx depends on a harness-specific mechanism,** such as hooks. It must run
@@ -228,7 +233,8 @@ in substance (the builder chooses the wording and tests it):
   section, and add any new decisions to the list. Do not write a new dated
   file.
 - **Plan overview:** after writing-plans saves a plan, and before asking for
-  plan review, use `spx:illustrate-plan`.
+  plan review, ask the dev whether they want an overview for people. Use
+  `spx:illustrate-plan` only if they say yes.
 - **Sidecars:** `.overview.md` files next to plans are for people.
   - Never plan or implement from them.
   - Only `spx:illustrate-plan` writes them.
@@ -264,7 +270,7 @@ For that reason:
 |---|---|---|
 | `spx:setup` | Only when someone asks for it | Prepare, review or update a repo for spx, including the ownership memory |
 | `spx:spec-lifecycle` | On its own, at spec moments | Spec format, related specs, status changes, spec PR reviewers, archiving; ships the checker |
-| `spx:illustrate-plan` | On its own after each saved plan, and on request | Write the plan's overview sidecar |
+| `spx:illustrate-plan` | Only when the dev asks, or says yes when offered after a saved plan | Write the plan's overview sidecar |
 
 - **No separate ownership skill.** "Review code ownership" means running
   `spx:setup` in update mode with the ownership step selected. *(my call)*
@@ -320,6 +326,9 @@ content stays exactly as brainstorming writes it, and spx adds three parts:
 ---
 status: assessed
 assessed-at: 2026-10-17T14:05:00Z
+materializes:
+  - SHOP-1423
+  - https://example.atlassian.net/wiki/spaces/SHOP/pages/98765
 relates-to:
   - docs/superpowers/specs/2026-06-02-checkout-design.md
 ---
@@ -346,8 +355,16 @@ Scope: authentication, secrets, PII handling
 |---|---|---|
 | `status` | Always | `draft`, `assessed`, `in-progress`, `done` or `abandoned` |
 | `assessed-at` | Once the spec has been assessed | UTC timestamp (ISO 8601) of when it became `assessed`. Reset on every revision while it is still `assessed`. Drives the 14-day flag (7.5) |
+| `materializes` | Optional | What the spec is a materialization of: JIRA keys (`SHOP-1423`) or links to anything else, such as a wiki page. The field name is *(my call)* |
 | `relates-to` | Optional | Repo-relative paths to related specs |
 
+- **`materializes`:**
+  - spx records the tickets and links the dev mentions. When a new spec is
+    saved without any, spx asks once; "none" is a fine answer. *(my call)*
+  - spx never looks anything up in JIRA or elsewhere. The entries are
+    references, nothing more.
+  - When a spec is created from another one, spx asks which items the new
+    spec materializes instead of copying them over. *(my call)*
 - **Format rule:** only `key: value` lines and multi-line lists (`- item`,
   one per line).
   - No inline lists like `[a, b]`.
@@ -404,7 +421,7 @@ There are five statuses. There is no "outdated": a stale spec goes back to
 | The dev says the revised spec is ready for review | `status: assessed`, `assessed-at` = now; spx opens the spec PR | Feature branch / PR |
 | The spec is revised while `assessed` (e.g. after review comments) | `assessed-at` reset to now; reviewers added for any newly affected area | Same PR |
 | "Ready for review" again while the PR is open | Update the existing PR; never open a new one | Same PR |
-| writing-plans saves a plan from the spec | `status: in-progress`; confirm the plan's `**Spec:**` line; run `illustrate-plan`; commit and push the plan and overview to the PR before any code | Same PR |
+| writing-plans saves a plan from the spec | `status: in-progress`; confirm the plan's `**Spec:**` line; offer the overview, written by `illustrate-plan` only on a yes; commit and push the plan (and the overview, if any) to the PR before any code | Same PR |
 | The finishing step | `status: done` (see "Several plans" below); spec moved to `archive/`; links fixed | Same PR, before merge |
 | Someone says the feature is dropped | `status: abandoned`; spec moved to `archive/`; links fixed | Wherever the spec is |
 
@@ -428,7 +445,8 @@ There are five statuses. There is no "outdated": a stale spec goes back to
 - **Branch:** push the current branch. If the dev is on the default branch,
   ask for a branch name first, since teams name branches after JIRA keys.
   *(my call)*
-- **PR:** open it with `gh` and fill in the repo's PR template.
+- **PR:** open it with `gh` and fill in the repo's PR template. If the
+  template asks for tickets, take them from `materializes`.
 - **Reviewers:** request the GitHub owners of every affected area, taken
   from the ownership memory. spx has to do this explicitly. GitHub only
   requests owners automatically for the paths a PR changes, and a spec PR
@@ -488,10 +506,11 @@ team's usual flow.
 - **Why:** plans are long, detailed and technical. People review the overview
   instead: first the dev, then one or more of the spec's reviewers, in the
   feature PR, before any code is pushed.
-- **When:**
-  - on its own after writing-plans saves a plan, before the plan review
-    question *(my call: automatically after every plan)*
-  - whenever someone asks for it, optionally naming what to show
+- **When:** it never runs on its own.
+  - After writing-plans saves a plan, spx asks the dev whether they want an
+    overview, before superpowers' plan review question. It writes one only
+    on a yes. On a no, spx doesn't ask again for that plan.
+  - Whenever someone asks for it, optionally naming what to show.
 - **Where:** next to the plan, with the same name plus `.overview`:
 
   ```
@@ -526,8 +545,9 @@ team's usual flow.
   - rollout (flags, migration order, rollback)
 - **Format:** Mermaid diagrams. GitHub renders them, all three tools can
   write them, and nobody needs to install anything. *(my call)*
-- **Keeping it in step:** when the plan changes, the sidecar is regenerated.
-  Nobody hand-edits a sidecar to fix a plan problem.
+- **Keeping it in step:** when a plan that has a sidecar changes, spx offers
+  to regenerate the sidecar. Nobody hand-edits a sidecar to fix a plan
+  problem.
 
 ### 7.8 Checker
 
@@ -541,6 +561,7 @@ team's usual flow.
   | Front matter | Present and within the allowed format; inline lists flagged |
   | Front matter | `status` is one of the five values |
   | Front matter | `assessed-at` is a valid timestamp, and present when `status: assessed` |
+  | Front matter | `materializes` entries are non-empty (never looked up) |
   | Staleness | An `assessed` spec past 14 days is reported as stale |
   | Links | Every `relates-to` entry points to an existing spec |
   | Sections | `## Decisions` and `## Owner review` are present |
@@ -548,7 +569,7 @@ team's usual flow.
   | Branch | On the default branch, only `draft`, `done` or `abandoned` (only when run inside git) |
   | Hint | A `draft` spec whose related specs are all `done` or `abandoned` |
   | Plans | Every plan's `**Spec:**` line points to an existing spec |
-  | Plans | Every plan has its `.overview.md` sidecar |
+  | Sidecars | Every `.overview.md` sidecar has its plan next to it (a plan without a sidecar is fine) |
   | Sidecars | The first line names its plan |
   | Sidecars | The sidecar is not older than its plan (by last commit, else by file time) |
 
@@ -556,16 +577,15 @@ team's usual flow.
   must not be flagged. How setup marks that point is left to the builder.
 - **Output:** a short report to read, with errors and warnings.
   - The exit code is non-zero only on errors, so CI can show a failing check.
-  - Whether that failure blocks a merge is the team's branch-protection
-    choice, not spx's.
+  - Whether that failure blocks a merge is the team's choice, not spx's.
 - **When the skills run it:**
   - after a spec is saved or revised
   - before opening or updating the spec PR
-  - after the plan and overview are saved
+  - after a plan is saved (and its overview, if one was asked for)
   - at finishing, after archive moves
 
   The skills show the dev the report and carry on.
-- **In CI:** setup can add a workflow that runs it on PRs (7.9, step 7).
+- **In CI:** setup can add a workflow that runs it on PRs (7.9, step 6).
 
 ### 7.9 Setup (`spx:setup`)
 
@@ -590,16 +610,17 @@ team's usual flow.
    instructions file the target harnesses read (7.1).
 5. **PR template:** check that one exists, and offer a starter for spec PRs
    if it doesn't.
-6. **Branch protection:** check whether code-owner approval is required.
-   Report and recommend only. Setup never changes repo settings. *(my call)*
-7. **CI check (optional):** offer a GitHub Actions workflow that runs the
+6. **CI check (optional):** offer a GitHub Actions workflow that runs the
    checker on PRs.
    - The repo needs its own copy of the checker for this, stamped with spx's
      version.
    - Update mode refreshes that copy.
    - Where the copy lives is left to the builder; `docs/spx/` is suggested.
-8. **Summary and commit:** show every change, then commit after the user
+7. **Summary and commit:** show every change, then commit after the user
    confirms.
+
+Setup never touches repo settings on GitHub, such as branch rules. Those
+belong to the team's process. *(my call)*
 
 **Update/review mode.** Each step compares what's in the repo with what spx
 expects, reports the differences, and proposes fixes. It doesn't rebuild
@@ -616,12 +637,10 @@ To get the most out of spx, a team needs:
 3. a PR template for spec PRs
 4. the GitHub CLI installed and signed in wherever spx runs, and Node for the
    checker
-5. a branch protection rule requiring code-owner approval, which is where the
-   process gets enforced
-6. optionally, the checker running in CI
-7. `spx:setup` run once in init mode, then re-run in update mode when
+5. optionally, the checker running in CI
+6. `spx:setup` run once in init mode, then re-run in update mode when
    ownership changes or spx is upgraded
-8. sessions started inside the repo, not in a parent folder
+7. sessions started inside the repo, not in a parent folder
 
 ## 8. Packaging and upstream
 
@@ -677,7 +696,8 @@ In Kiro, the tests count only once superpowers' own check passes there:
 
 1. **New spec:** brainstorming a new feature produces a spec with
    `status: draft`, a decisions list, and an owner review section that
-   matches the ownership memory.
+   matches the ownership memory. A JIRA key mentioned in the conversation
+   lands in `materializes`; with none mentioned, spx asks once.
 2. **Revision:** brainstorming with an existing draft as input updates that
    file in place, adds decisions, and creates no second spec.
 3. **Ready for review:** saying "the spec is ready for review" sets
@@ -687,9 +707,11 @@ In Kiro, the tests count only once superpowers' own check passes there:
    `assessed-at` and adds reviewers for newly affected areas.
 5. **Stale spec:** planning from an `assessed` spec more than 14 days past
    `assessed-at` warns and resets it to `draft`, without blocking the plan.
-6. **Plan saved:** the spec becomes `in-progress`, and an `.overview.md`
-   sidecar with the default contents appears before the plan review
-   question. Both are pushed to the PR.
+6. **Plan saved:** the spec becomes `in-progress`, and the dev is asked
+   whether they want an overview before the plan review question. On a yes,
+   an `.overview.md` sidecar with the default contents appears; on a no, none
+   is written and the question isn't repeated. The plan, and the overview if
+   any, are pushed to the PR.
 7. **Finishing:** the spec becomes `done` and moves to `archive/`. Its
    `relates-to` and `**Spec:**` links are fixed, and the work goes into the
    existing PR. No new PR is opened, including when a worktree was used.
